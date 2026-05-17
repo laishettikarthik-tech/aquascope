@@ -15,8 +15,6 @@ import logging
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-import httpx
-
 from aquascope.ai_engine.knowledge_base import (
     METHODOLOGIES,
     ResearchMethodology,
