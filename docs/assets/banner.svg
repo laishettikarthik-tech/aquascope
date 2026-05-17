@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-label="AquaScope banner">
+  <title>AquaScope — Open-source water data, hydrology, and agricultural water management toolkit</title>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1f2a"/>
+      <stop offset="60%" stop-color="#0e3a52"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="dropGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#22d3ee" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="dropClip2">
+      <path d="M180 60 C 180 60, 120 130, 120 180 a60 60 0 0 0 120 0 C 240 130, 180 60, 180 60 Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#bgGrad)"/>
+
+  <!-- Decorative hydrograph stack across the full banner -->
+  <g stroke="url(#lineGrad)" fill="none" stroke-width="1.4">
+    <path d="M0 260 Q 160 240, 320 252 T 640 232 T 960 246 T 1280 226"/>
+    <path d="M0 240 Q 160 222, 320 232 T 640 210 T 960 226 T 1280 204" opacity="0.85"/>
+    <path d="M0 220 Q 160 204, 320 212 T 640 190 T 960 206 T 1280 184" opacity="0.7"/>
+    <path d="M0 200 Q 160 186, 320 192 T 640 168 T 960 184 T 1280 162" opacity="0.55"/>
+    <path d="M0 180 Q 160 168, 320 174 T 640 150 T 960 164 T 1280 142" opacity="0.4"/>
+    <path d="M0 160 Q 160 150, 320 154 T 640 130 T 960 144 T 1280 122" opacity="0.25"/>
+  </g>
+
+  <!-- Logo drop on the left -->
+  <g>
+    <path d="M180 60 C 180 60, 120 130, 120 180 a60 60 0 0 0 120 0 C 240 130, 180 60, 180 60 Z"
+          fill="url(#dropGrad2)"/>
+    <g clip-path="url(#dropClip2)" stroke="#e0fbff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85">
+      <path d="M115 218 Q 140 208, 160 214 T 200 202 T 245 192"/>
+      <path d="M115 202 Q 140 190, 160 198 T 200 184 T 245 172" opacity="0.85"/>
+      <path d="M115 186 Q 140 174, 160 182 T 200 166 T 245 154" opacity="0.7"/>
+      <path d="M115 170 Q 140 160, 160 168 T 200 150 T 245 136" opacity="0.55"/>
+    </g>
+    <path d="M156 100 Q 142 128, 146 156" stroke="#ffffff" stroke-opacity="0.6"
+          stroke-width="5" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Wordmark + tagline -->
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e0fbff">
+    <text x="300" y="148" font-size="74" font-weight="700" letter-spacing="-1.5">AquaScope</text>
+    <text x="302" y="190" font-size="22" font-weight="400" fill="#9be8f5">
+      Water data · Hydrology · Agriculture · AI methodology recommendations
+    </text>
+    <g font-size="16" fill="#67e8f9">
+      <text x="302" y="232">12 data sources</text>
+      <text x="448" y="232">·</text>
+      <text x="462" y="232">26 methodologies</text>
+      <text x="638" y="232">·</text>
+      <text x="652" y="232">FAO-56 ET₀</text>
+      <text x="772" y="232">·</text>
+      <text x="786" y="232">Bulletin 17C FFA</text>
+      <text x="942" y="232">·</text>
+      <text x="956" y="232">534 tests</text>
+    </g>
+  </g>
+
+  <!-- Subtle bottom border -->
+  <rect x="0" y="318" width="1280" height="2" fill="#22d3ee" opacity="0.4"/>
+</svg>

@@ -1,22 +1,34 @@
-![CI](https://github.com/Rekin226/aquascope/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-534%20passed-brightgreen)
+<div align="center">
+
+<img src="docs/assets/logo.svg" alt="AquaScope logo" width="160"/>
 
 # AquaScope
 
+**Open-source water data aggregation, hydrological analysis, and agricultural water management toolkit — with an AI engine that recommends and executes research methodologies.**
+
 [![CI](https://github.com/Rekin226/aquascope/actions/workflows/ci.yml/badge.svg)](https://github.com/Rekin226/aquascope/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://img.shields.io/pypi/v/aquascope.svg?color=blue)](https://pypi.org/project/aquascope/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/aquascope.svg?color=blue)](https://pypi.org/project/aquascope/)
+[![Python](https://img.shields.io/pypi/pyversions/aquascope.svg?color=informational)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-orange.svg)](CHANGELOG.md)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
+[![Tests](https://img.shields.io/badge/tests-534%20passing-brightgreen.svg)](#)
 
-**Open-source water data aggregation, hydrological analysis, and agricultural water management toolkit with AI-powered research methodology recommendations.**
+[![GitHub stars](https://img.shields.io/github/stars/Rekin226/aquascope?style=social)](https://github.com/Rekin226/aquascope/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Rekin226/aquascope?style=social)](https://github.com/Rekin226/aquascope/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/Rekin226/aquascope.svg)](https://github.com/Rekin226/aquascope/issues)
 
-AquaScope collects water-quality, hydrology, and agricultural water data from
-12 global sources, normalises it into unified schemas, and provides a complete
-scientific computing stack — from Bulletin 17C flood frequency analysis to
-FAO-56 crop water requirements — with an AI engine that recommends and
-auto-executes research methodologies.
+[**Documentation**](docs/theory.md) ·
+[**Quick Start**](#quick-start) ·
+[**Data Sources**](#data-sources) ·
+[**Roadmap**](#roadmap) ·
+[**Citation**](#citation)
+
+</div>
+
+---
+
+> AquaScope collects water-quality, hydrology, and agricultural data from **12 global sources**, normalises it into unified schemas, and provides a complete scientific computing stack — from **Bulletin 17C flood frequency** to **FAO-56 crop water requirements** — wrapped in an AI engine that scores **26 research methodologies** against your dataset and auto-executes **7 analysis pipelines**.
 
 ---
 
@@ -79,21 +91,63 @@ auto-executes research methodologies.
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    subgraph Interface["User Interface"]
+        CLI["CLI<br/>14 commands"]
+        API["Python API"]
+        DASH["Streamlit Dashboard<br/>7 pages"]
+    end
+
+    subgraph Intelligence["Intelligence Layer"]
+        AI["AI Engine<br/>26 methodologies"]
+        PIPE["Pipelines<br/>7 auto-executable"]
+        CHAL["Challenges<br/>flood / drought / WQ"]
+    end
+
+    subgraph Science["Scientific Core"]
+        HYD["Hydrology<br/>FFA · Baseflow · FDC · Signatures"]
+        AGRI["Agriculture<br/>FAO-56 ET₀ · Crop water · SWB"]
+        ANA["Analysis<br/>EDA · QA · Copulas · Changepoints"]
+        MODEL["Models<br/>Bayesian · Ensembles · LSTM · Transfer"]
+        SPATIAL["Spatial<br/>DEM · Watershed · Strahler"]
+    end
+
+    subgraph Data["Data Layer"]
+        COL["Collectors · 12 sources<br/>Taiwan · USA · Global · FAO"]
+        SCHEMA["Unified Pydantic Schemas"]
+        IO["Scientific I/O<br/>WaterML · HEC · SWMM · NetCDF · HDF5"]
+    end
+
+    subgraph Output["Output"]
+        VIZ["Viz · 16 plots + Q-Q/P-P diagnostics"]
+        REP["Reports · Markdown + HTML"]
+        ALERT["Alerts · WHO · EPA · EU WFD"]
+    end
+
+    Interface --> Intelligence
+    Intelligence --> Science
+    Science --> Data
+    Science --> Output
+    Data --> SCHEMA
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                    CLI (14 commands) / Python API                 │
-├──────────┬──────────┬───────────┬───────────┬───────────────────┤
-│Collectors│ Analysis │ Pipelines │ AI Engine │   Agriculture     │
-│(12 APIs) │EDA+QA+CP │(7 methods)│(26 method)│ FAO-56 ET₀+Crops  │
-├──────────┼──────────┼───────────┼───────────┼───────────────────┤
-│Hydrology │ Models   │  Spatial  │    I/O    │  Viz + Reporting  │
-│FFA+BF+RC │Bayes+Ens │DEM+Wshed │WML+HEC+SW│ 16 plots + diag   │
-├──────────┴──────────┴───────────┴───────────┴───────────────────┤
-│              Unified Schemas (Pydantic) + Alerts                 │
-├──────────────────────────────────────────────────────────────────┤
-│         Utilities (HTTP, Storage, Imports) + Dashboard            │
-└──────────────────────────────────────────────────────────────────┘
-```
+
+---
+
+## Screenshots
+
+> Placeholders — drop PNG/GIFs into `docs/assets/` and replace these references.
+
+<div align="center">
+
+| Streamlit dashboard | Flood frequency (GEV) | Watershed delineation |
+| :---: | :---: | :---: |
+| <img src="docs/assets/screenshot-dashboard.png" alt="Dashboard" width="280"/> | <img src="docs/assets/screenshot-flood-frequency.png" alt="Flood frequency" width="280"/> | <img src="docs/assets/screenshot-watershed.png" alt="Watershed" width="280"/> |
+| 7-page interactive app | Bulletin 17C-compliant FFA with return-level CIs | D8 flow direction + Strahler ordering |
+
+</div>
+
+> **Quick demo (Colab):** _coming soon — add a notebook badge here once published._
 
 ---
 
@@ -114,6 +168,22 @@ auto-executes research methodologies.
 | [FAO WaPOR](https://www.fao.org/in-action/remote-sensing-for-water-productivity) | Global | Satellite ET, biomass, water productivity | REST | ✅ |
 
 **Want to add your country's water data?** See our [guide to adding data sources](docs/guides/adding_data_source.md).
+
+---
+
+## Why AquaScope
+
+| | AquaScope | HEC-SSP | R `lmom` / `lmomRFA` | Standalone collectors |
+| :--- | :---: | :---: | :---: | :---: |
+| Bulletin 17C FFA + EMA | ✅ | ✅ | partial | — |
+| Non-stationary GEV | ✅ | — | partial | — |
+| Baseflow separation (Lyne-Hollick, Eckhardt) | ✅ | — | — | — |
+| FAO-56 Penman-Monteith ET₀ + crop water | ✅ | — | — | — |
+| 12 unified data-source collectors | ✅ | — | — | per-source |
+| AI methodology recommender | ✅ | — | — | — |
+| Streamlit dashboard | ✅ | — | — | — |
+| Free & open source (MIT) | ✅ | ✅ | ✅ | varies |
+| Python-native | ✅ | — | — | varies |
 
 ---
 
@@ -374,7 +444,7 @@ If you use AquaScope in your research, please cite:
   author    = {AquaScope Contributors},
   year      = {2026},
   url       = {https://github.com/Rekin226/aquascope},
-  version   = {0.3.0},
+  version   = {0.4.0},
   license   = {MIT}
 }
 ```

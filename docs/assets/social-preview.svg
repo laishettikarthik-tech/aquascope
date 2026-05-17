@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-label="AquaScope social preview">
+  <title>AquaScope — Open-source water data, hydrology, and agricultural water management</title>
+  <defs>
+    <linearGradient id="sBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1a24"/>
+      <stop offset="55%" stop-color="#0e3a52"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="sDrop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="sLines" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="sDropClip">
+      <path d="M220 110 C 220 110, 130 215, 130 290 a90 90 0 0 0 180 0 C 310 215, 220 110, 220 110 Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#sBg)"/>
+
+  <!-- Decorative hydrograph mesh across the background -->
+  <g stroke="url(#sLines)" fill="none" stroke-width="1.6">
+    <path d="M0 520 Q 200 488, 400 506 T 800 470 T 1280 492"/>
+    <path d="M0 488 Q 200 460, 400 478 T 800 442 T 1280 462" opacity="0.85"/>
+    <path d="M0 456 Q 200 432, 400 448 T 800 412 T 1280 434" opacity="0.7"/>
+    <path d="M0 424 Q 200 404, 400 418 T 800 384 T 1280 406" opacity="0.55"/>
+    <path d="M0 392 Q 200 374, 400 388 T 800 354 T 1280 376" opacity="0.4"/>
+    <path d="M0 360 Q 200 346, 400 358 T 800 324 T 1280 346" opacity="0.28"/>
+    <path d="M0 328 Q 200 316, 400 326 T 800 296 T 1280 314" opacity="0.18"/>
+  </g>
+
+  <!-- Logo drop, large -->
+  <g>
+    <path d="M220 110 C 220 110, 130 215, 130 290 a90 90 0 0 0 180 0 C 310 215, 220 110, 220 110 Z"
+          fill="url(#sDrop)"/>
+    <g clip-path="url(#sDropClip)" stroke="#e0fbff" stroke-width="3.5" fill="none"
+       stroke-linecap="round" opacity="0.9">
+      <path d="M120 350 Q 160 336, 195 344 T 260 326 T 320 312"/>
+      <path d="M120 326 Q 160 310, 195 318 T 260 300 T 320 284" opacity="0.85"/>
+      <path d="M120 302 Q 160 286, 195 294 T 260 272 T 320 256" opacity="0.7"/>
+      <path d="M120 278 Q 160 264, 195 270 T 260 246 T 320 228" opacity="0.55"/>
+      <path d="M120 254 Q 160 244, 195 248 T 260 222 T 320 202" opacity="0.4"/>
+    </g>
+    <path d="M188 160 Q 168 200, 172 240" stroke="#ffffff" stroke-opacity="0.65"
+          stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M220 110 C 220 110, 130 215, 130 290 a90 90 0 0 0 180 0 C 310 215, 220 110, 220 110 Z"
+          fill="none" stroke="#0a1a24" stroke-opacity="0.3" stroke-width="2"/>
+  </g>
+
+  <!-- Wordmark, tagline, stats -->
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e0fbff">
+    <text x="380" y="240" font-size="118" font-weight="700" letter-spacing="-2.5">AquaScope</text>
+    <text x="384" y="296" font-size="30" font-weight="500" fill="#9be8f5">
+      Open-source water data · hydrology · agriculture
+    </text>
+    <text x="384" y="334" font-size="22" font-weight="400" fill="#7dd3fc">
+      AI-powered research methodology recommendations
+    </text>
+  </g>
+
+  <!-- Stats row (cards) -->
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <g transform="translate(130,440)">
+      <rect width="240" height="120" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#22d3ee" stroke-opacity="0.35"/>
+      <text x="120" y="58" font-size="44" font-weight="700" fill="#67e8f9" text-anchor="middle">12</text>
+      <text x="120" y="92" font-size="17" fill="#9be8f5" text-anchor="middle">data sources</text>
+    </g>
+    <g transform="translate(390,440)">
+      <rect width="240" height="120" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#22d3ee" stroke-opacity="0.35"/>
+      <text x="120" y="58" font-size="44" font-weight="700" fill="#67e8f9" text-anchor="middle">26</text>
+      <text x="120" y="92" font-size="17" fill="#9be8f5" text-anchor="middle">methodologies</text>
+    </g>
+    <g transform="translate(650,440)">
+      <rect width="240" height="120" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#22d3ee" stroke-opacity="0.35"/>
+      <text x="120" y="58" font-size="44" font-weight="700" fill="#67e8f9" text-anchor="middle">7</text>
+      <text x="120" y="92" font-size="17" fill="#9be8f5" text-anchor="middle">auto pipelines</text>
+    </g>
+    <g transform="translate(910,440)">
+      <rect width="240" height="120" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#22d3ee" stroke-opacity="0.35"/>
+      <text x="120" y="58" font-size="44" font-weight="700" fill="#67e8f9" text-anchor="middle">534</text>
+      <text x="120" y="92" font-size="17" fill="#9be8f5" text-anchor="middle">tests passing</text>
+    </g>
+  </g>
+
+  <!-- Footer URL + license -->
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#9be8f5">
+    <text x="1240" y="50" font-size="18" text-anchor="end" opacity="0.85">github.com/Rekin226/aquascope</text>
+    <text x="1240" y="74" font-size="14" text-anchor="end" opacity="0.65">MIT · Python ≥ 3.10</text>
+  </g>
+</svg>

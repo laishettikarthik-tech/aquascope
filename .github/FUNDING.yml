@@ -1,0 +1,14 @@
+# Supported funding platforms — see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+# Uncomment + fill in the lines for any platform you want the "Sponsor" button to link to.
+# Multiple platforms can be enabled at the same time.
+
+github: [Rekin226]            # Apply at https://github.com/sponsors — button stays hidden until approved
+# ko_fi: Rekin226              # ko-fi.com/<username>   — 5-min signup, no approval needed
+# buy_me_a_coffee: Rekin226    # buymeacoffee.com/<username>
+# open_collective: aquascope   # opencollective.com/<slug> — best for multi-maintainer transparency
+# patreon: Rekin226            # patreon.com/<username>
+# tidelift: pypi/aquascope     # for OSS maintainers via Tidelift Subscription
+# liberapay: Rekin226          # liberapay.com/<username>
+# polar: Rekin226              # polar.sh/<username> — pay for issues/features
+# custom: ['https://your-lab-page.example']   # any HTTPS URL (university lab, PayPal.me, Stripe, etc.)
