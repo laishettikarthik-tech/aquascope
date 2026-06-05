@@ -397,22 +397,23 @@ def page_data_collection() -> None:
             help="Taiwan is not included in UN SDG data. Try Germany, United States, India, etc.",
         )
         kwargs["country_codes"] = ",".join(_SDG6_COUNTRIES[n] for n in _selected_names) if _selected_names else None
+        _SDG6_LABELS = {
+            "6.1.1": "Safely managed drinking water",
+            "6.2.1": "Safely managed sanitation",
+            "6.3.1": "Safely treated wastewater",
+            "6.3.2": "Good ambient water quality",
+            "6.4.1": "Water-use efficiency",
+            "6.4.2": "Water stress",
+            "6.5.1": "IWRM implementation",
+            "6.5.2": "Transboundary cooperation",
+            "6.6.1": "Water-related ecosystems",
+        }
         kwargs["indicator_codes"] = [
             st.selectbox(
                 "Indicator",
-                ["6.1.1", "6.2.1", "6.3.1", "6.3.2", "6.4.1", "6.4.2", "6.5.1", "6.5.2", "6.6.1"],
+                list(_SDG6_LABELS.keys()),
                 index=5,
-                format_func=lambda c: f"{c} ({ {
-                    '6.1.1': 'Safely managed drinking water',
-                    '6.2.1': 'Safely managed sanitation',
-                    '6.3.1': 'Safely treated wastewater',
-                    '6.3.2': 'Good ambient water quality',
-                    '6.4.1': 'Water-use efficiency',
-                    '6.4.2': 'Water stress',
-                    '6.5.1': 'IWRM implementation',
-                    '6.5.2': 'Transboundary cooperation',
-                    '6.6.1': 'Water-related ecosystems',
-                }[c]})",
+                format_func=lambda c: f"{c} ({_SDG6_LABELS[c]})",
             )
         ]
 
