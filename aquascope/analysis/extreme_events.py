@@ -15,6 +15,7 @@ in :mod:`aquascope.models.analysis`.
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -90,7 +91,10 @@ def _logpdf_sum(distribution: str, data: np.ndarray, params) -> float:
     return float(np.sum(stats.pearson3.logpdf(log_data, *params) + jac))
 
 
-def compute_gev_parameters(data, method="mle"):
+def compute_gev_parameters(
+    data: pd.Series | np.ndarray,
+    method: str = "mle",
+) -> GEVParameters:
     """Fit a Generalised Extreme Value distribution to block maxima.
 
     Args:
@@ -106,7 +110,10 @@ def compute_gev_parameters(data, method="mle"):
     return GEVParameters(shape=float(-c), location=float(loc), scale=float(scale), method=method)
 
 
-def fit_distribution(series, distribution="gev"):
+def fit_distribution(
+    series: pd.Series,
+    distribution: Literal["gev", "lp3", "gumbel"] = "gev",
+) -> DistributionFit:
     """Fit one extreme-value distribution and score its goodness of fit.
 
     Args:
@@ -142,13 +149,13 @@ def fit_distribution(series, distribution="gev"):
 
 
 def estimate_return_periods(
-    series,
-    distribution="gev",
-    return_periods=DEFAULT_RETURN_PERIODS,
-    confidence_level=0.95,
-    n_bootstrap=500,
-    random_state=42,
-):
+    series: pd.Series,
+    distribution: Literal["gev", "lp3", "gumbel"] = "gev",
+    return_periods: tuple[float, ...] = DEFAULT_RETURN_PERIODS,
+    confidence_level: float = 0.95,
+    n_bootstrap: int = 500,
+    random_state: int = 42,
+) -> ReturnPeriodResult:
     """Estimate return levels with parametric-bootstrap confidence bounds.
 
     For each return period ``T`` the non-exceedance probability is
