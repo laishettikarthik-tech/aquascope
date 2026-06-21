@@ -255,3 +255,124 @@ class GR4J:
         ratio = s / x1
         tanh_term = np.tanh(en / x1)
         return (s * (2 - ratio) * tanh_term) / (1 + (1 - ratio) * tanh_term)
+
+@dataclass
+class CalibrationResult:
+    """Result of calibrating a GR4J model against observed discharge.
+
+    Attributes
+    ----------
+    params : dict
+        Best-fit parameters (X1-X4).
+    objective_value : float
+        Final objective function value (the metric being optimized,
+        negated internally for minimization — reported here in its
+        natural sign, e.g. KGE = 0.85 means a good fit).
+    objective_name : str
+        Name of the objective used ("nse", "kge", or "log_nse").
+    n_iterations : int
+        Number of optimizer iterations/generations completed.
+    simulated : pd.Series
+        Streamflow simulated with the best-fit parameters over the
+        full (warmup + evaluation) period.
+    """
+
+    params: dict[str, float]
+    objective_value: float
+    objective_name: str
+    n_iterations: int
+    simulated: pd.Series
+
+
+def calibrate(
+    precip: pd.Series,
+    pet: pd.Series,
+    observed: pd.Series,
+    objective: str = "kge",
+    warmup_days: int = 365,
+    param_bounds: dict[str, tuple[float, float]] | None = None,
+    seed: int | None = 42,
+    maxiter: int = 100,
+) -> CalibrationResult:
+    """Calibrate GR4J parameters against observed discharge.
+
+    Uses ``scipy.optimize.differential_evolution`` (a global optimizer,
+    avoiding a SCE-UA dependency) to find the X1-X4 parameter set that
+    maximizes the chosen objective function over the post-warmup period.
+
+    Parameters
+    ----------
+    precip : pd.Series
+        Daily precipitation (mm/day).
+    pet : pd.Series
+        Daily potential evapotranspiration (mm/day).
+    observed : pd.Series
+        Observed daily discharge (mm/day), aligned with *precip*/*pet*.
+    objective : str
+        One of ``"nse"``, ``"kge"``, ``"log_nse"``. Higher is better for
+        all three; the optimizer internally minimizes the negative.
+    warmup_days : int
+        Initial days excluded from the objective calculation (but still
+        simulated, to spin up store states).
+    param_bounds : dict, optional
+        Override bounds for any of X1-X4; merged with
+        :data:`GR4J_PARAM_BOUNDS` defaults.
+    seed : int, optional
+        Random seed for reproducibility.
+    maxiter : int
+        Maximum optimizer generations.
+
+    Returns
+    -------
+    CalibrationResult
+    """
+    from scipy.optimize import differential_evolution
+
+    from aquascope.analysis import metrics as metrics_module
+
+    objective_fns = {
+        "nse": metrics_module.nse,
+        "kge": metrics_module.kge,
+        "log_nse": metrics_module.log_nse,
+    }
+    if objective not in objective_fns:
+        raise ValueError(f"Unknown objective '{objective}'. Choose from {list(objective_fns)}.")
+    objective_fn = objective_fns[objective]
+
+    bounds = dict(GR4J_PARAM_BOUNDS)
+    if param_bounds:
+        bounds.update(param_bounds)
+    order = ["X1", "X2", "X3", "X4"]
+    bounds_list = [bounds[k] for k in order]
+
+    obs_eval = observed.values[warmup_days:]
+
+    def neg_objective(x: np.ndarray) -> float:
+        model = GR4J(x1=x[0], x2=x[1], x3=x[2], x4=x[3])
+        result = model.simulate(precip, pet, warmup_days=warmup_days)
+        sim_eval = result.streamflow.values[warmup_days:]
+        score = objective_fn(obs_eval, sim_eval)
+        if np.isnan(score):
+            return 1e6  # heavily penalize degenerate parameter sets
+        return -score
+
+    opt_result = differential_evolution(
+        neg_objective,
+        bounds=bounds_list,
+        seed=seed,
+        maxiter=maxiter,
+        polish=True,
+        tol=1e-6,
+    )
+
+    best_params = dict(zip(order, opt_result.x, strict=True))
+    best_model = GR4J(**{k.lower(): v for k, v in best_params.items()})
+    best_sim = best_model.simulate(precip, pet, warmup_days=warmup_days)
+
+    return CalibrationResult(
+        params=best_params,
+        objective_value=float(-opt_result.fun),
+        objective_name=objective,
+        n_iterations=int(opt_result.nit),
+        simulated=best_sim.streamflow,
+    )
