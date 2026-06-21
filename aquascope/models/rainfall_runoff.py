@@ -256,6 +256,7 @@ class GR4J:
         tanh_term = np.tanh(en / x1)
         return (s * (2 - ratio) * tanh_term) / (1 + (1 - ratio) * tanh_term)
 
+
 @dataclass
 class CalibrationResult:
     """Result of calibrating a GR4J model against observed discharge.
