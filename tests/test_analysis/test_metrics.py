@@ -5,7 +5,18 @@ import math
 import numpy as np
 import pytest
 
-from aquascope.analysis.metrics import kge, log_nse, nse, pbias, r2, rmse
+from aquascope.analysis.metrics import (
+    crps_ensemble,
+    kge,
+    log_nse,
+    mpiw,
+    nse,
+    pbias,
+    picp,
+    pinball_loss,
+    r2,
+    rmse,
+)
 
 
 class TestNSE:
@@ -142,3 +153,100 @@ class TestR2:
         obs = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         sim = np.array([1.0, 2.0, 3.0, 4.0, 6.0])
         assert r2(obs, sim) == pytest.approx(nse(obs, sim))
+
+
+class TestPinballLoss:
+    def test_median_equals_half_abs_error(self):
+        # q=0.5: loss reduces to 0.5 * |error|
+        loss = pinball_loss(np.array([10.0]), np.array([8.0]), 0.5)
+        assert loss == pytest.approx(1.0)
+
+    def test_under_prediction_high_quantile(self):
+        # obs>pred (under-prediction), q=0.9 -> penalty 0.9 * error
+        loss = pinball_loss(np.array([10.0]), np.array([8.0]), 0.9)
+        assert loss == pytest.approx(1.8)
+
+    def test_over_prediction_high_quantile(self):
+        # obs<pred (over-prediction), q=0.9 -> penalty 0.1 * |error|
+        loss = pinball_loss(np.array([8.0]), np.array([10.0]), 0.9)
+        assert loss == pytest.approx(0.2)
+
+    def test_perfect_is_zero(self):
+        obs = np.array([1.0, 2.0, 3.0])
+        assert pinball_loss(obs, obs, 0.7) == pytest.approx(0.0)
+
+    def test_invalid_quantile_raises(self):
+        with pytest.raises(ValueError):
+            pinball_loss(np.array([1.0]), np.array([1.0]), 1.0)
+
+    def test_nan_aware(self):
+        loss = pinball_loss(
+            np.array([10.0, np.nan]), np.array([8.0, 5.0]), 0.5
+        )
+        assert loss == pytest.approx(1.0)
+
+
+class TestPICP:
+    def test_partial_coverage(self):
+        obs = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        lower = np.zeros(5)
+        upper = np.full(5, 3.0)
+        # 1,2,3 inside; 4,5 outside -> 0.6
+        assert picp(obs, lower, upper) == pytest.approx(0.6)
+
+    def test_full_coverage(self):
+        obs = np.array([1.0, 2.0, 3.0])
+        assert picp(obs, np.zeros(3), np.full(3, 10.0)) == pytest.approx(1.0)
+
+    def test_nominal_coverage_on_calibrated_data(self):
+        rng = np.random.default_rng(0)
+        obs = rng.standard_normal(20000)
+        lower = np.full_like(obs, -1.6449)  # N(0,1) 5% quantile
+        upper = np.full_like(obs, 1.6449)  # N(0,1) 95% quantile
+        assert picp(obs, lower, upper) == pytest.approx(0.90, abs=0.02)
+
+
+class TestMPIW:
+    def test_mean_width(self):
+        lower = np.array([0.0, 1.0])
+        upper = np.array([2.0, 5.0])
+        assert mpiw(lower, upper) == pytest.approx(3.0)  # (2 + 4) / 2
+
+    def test_normalized_by_observed_range(self):
+        lower = np.array([0.0, 1.0])
+        upper = np.array([2.0, 5.0])
+        observed = np.array([0.0, 10.0])  # range 10
+        assert mpiw(lower, upper, observed=observed) == pytest.approx(0.3)
+
+    def test_nan_aware(self):
+        lower = np.array([0.0, np.nan])
+        upper = np.array([2.0, 5.0])
+        assert mpiw(lower, upper) == pytest.approx(2.0)
+
+
+class TestCRPSEnsemble:
+    def test_deterministic_ensemble_reduces_to_mae(self):
+        # All members equal -> spread term is 0 -> CRPS == |mean - obs|
+        obs = np.array([10.0])
+        ens = np.array([[8.0, 8.0, 8.0]])
+        assert crps_ensemble(obs, ens) == pytest.approx(2.0)
+
+    def test_perfect_deterministic_is_zero(self):
+        obs = np.array([5.0, 6.0])
+        ens = np.array([[5.0, 5.0], [6.0, 6.0]])
+        assert crps_ensemble(obs, ens) == pytest.approx(0.0)
+
+    def test_two_member_spread(self):
+        # obs=0, members {-1, 1}: term1 = mean(1,1)=1; spread = (|−1−1|*2)/(2*4)=0.5
+        obs = np.array([0.0])
+        ens = np.array([[-1.0, 1.0]])
+        assert crps_ensemble(obs, ens) == pytest.approx(0.5)
+
+    def test_shape_mismatch_raises(self):
+        with pytest.raises(ValueError):
+            crps_ensemble(np.array([1.0, 2.0]), np.array([[1.0, 2.0]]))
+
+    def test_nan_observation_dropped(self):
+        obs = np.array([10.0, np.nan])
+        ens = np.array([[8.0, 8.0], [0.0, 0.0]])
+        assert crps_ensemble(obs, ens) == pytest.approx(2.0)
