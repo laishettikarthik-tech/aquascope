@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 import pandas as pd
+import pytest
+
+_HAS_STATSMODELS = importlib.util.find_spec("statsmodels") is not None
 
 
 def _make_discharge(n: int = 730) -> pd.DataFrame:
@@ -33,6 +38,9 @@ def _make_wq_data() -> dict[str, pd.DataFrame]:
     return {"ph": ph, "nitrate": nitrate}
 
 
+@pytest.mark.skipif(
+    not _HAS_STATSMODELS, reason="statsmodels not installed (aquascope[ml])"
+)
 class TestFloodChallenge:
     def test_load_and_fit(self):
         from aquascope.challenges.flood import FloodChallenge
