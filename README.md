@@ -73,6 +73,7 @@ Feature-group extras:
 pip install "aquascope[ml]"           # sklearn, xgboost, statsmodels
 pip install "aquascope[viz]"          # matplotlib, seaborn, folium
 pip install "aquascope[scientific]"   # xarray, netcdf4, h5py
+pip install "aquascope[interop]"      # xarray + geopandas (collect as_xarray / as_geodataframe)
 pip install "aquascope[spatial]"      # rasterio, geopandas, shapely
 pip install "aquascope[dashboard]"    # streamlit
 pip install "aquascope[forecast]"     # prophet, torch (for LSTM)

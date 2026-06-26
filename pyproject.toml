@@ -85,8 +85,13 @@ spatial = [
     "geopandas>=0.14",
     "shapely>=2.0",
 ]
+interop = [
+    "xarray>=2023.1",
+    "geopandas>=0.14",
+    "shapely>=2.0",
+]
 all = [
-    "aquascope[ml,forecast,copernicus,viz,llm,scientific,dashboard,spatial]",
+    "aquascope[ml,forecast,copernicus,viz,llm,scientific,dashboard,spatial,interop]",
 ]
 dev = [
     "pytest>=7.0",
