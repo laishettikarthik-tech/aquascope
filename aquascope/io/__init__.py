@@ -14,6 +14,7 @@ from aquascope.io.hec import (
     write_hec_dss_csv,
     write_hec_ras_flow,
 )
+from aquascope.io.interop import records_to_geodataframe, records_to_xarray
 from aquascope.io.swmm import write_swmm_rainfall, write_swmm_timeseries
 from aquascope.io.waterml import (
     WaterMLTimeSeries,
@@ -28,6 +29,8 @@ __all__ = [
     "WaterMLTimeSeries",
     "dataframe_to_hec_format",
     "dataframe_to_waterml",
+    "records_to_geodataframe",
+    "records_to_xarray",
     "read_waterml",
     "waterml_to_dataframe",
     "write_hec_dss_csv",

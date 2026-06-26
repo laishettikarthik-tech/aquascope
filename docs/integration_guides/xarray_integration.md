@@ -1,99 +1,95 @@
-# xarray Integration Guide
+# xarray and GeoPandas Integration Guide
 
-Export AquaScope water-quality and hydrology data to
-[xarray](https://docs.xarray.dev/) Datasets for climate and
-spatiotemporal analysis.
+Export AquaScope records to [xarray](https://docs.xarray.dev/) Datasets and
+[GeoPandas](https://geopandas.org/) GeoDataFrames so they compose with the wider
+scientific-Python ecosystem (the Pangeo stack, NeuralHydrology, GIS).
 
 ## Prerequisites
 
 ```bash
-pip install "aquascope[scientific]"   # installs xarray, netcdf4, h5py
+pip install "aquascope[interop]"   # installs xarray, geopandas, shapely
 ```
 
-## Quick Export
+## Quick export to xarray
+
+`records_to_xarray()` builds a Dataset with dimensions `(time, station_id)`, one
+data variable per parameter, `lat`/`lon` station coordinates, and a `units`
+attribute on each variable:
 
 ```python
-import pandas as pd
-import xarray as xr
 from aquascope.collectors import TaiwanMOENVCollector
+from aquascope.io.interop import records_to_xarray
 
-# 1. Collect data
-collector = TaiwanMOENVCollector(api_key="YOUR_KEY")
-records = collector.collect()
-df = pd.DataFrame([r.model_dump() for r in records])
-
-# 2. Convert to xarray Dataset
-ds = xr.Dataset.from_dataframe(
-    df.set_index(["station_id", "timestamp"])
-)
+records = TaiwanMOENVCollector(api_key="YOUR_KEY").collect()
+ds = records_to_xarray(records)
 print(ds)
+# Dimensions:  (time, station_id); data variables: DO, pH, ...; coords lat/lon
 ```
 
-## Adding Coordinates and Attributes
+Or get the Dataset straight from the collector:
 
 ```python
-# Attach CF-compliant metadata for interoperability
+ds = TaiwanMOENVCollector(api_key="YOUR_KEY").collect(as_xarray=True)
+```
+
+`WaterQualitySample` records yield one variable per parameter; `WaterLevelReading`
+records yield a single `water_level` variable. Stations without a known location
+get `NaN` coordinates rather than being dropped.
+
+## Quick export to GeoPandas
+
+```python
+from aquascope.io.interop import records_to_geodataframe
+
+gdf = records_to_geodataframe(records)        # Point geometry, EPSG:4326
+gdf.to_file("stations.gpkg")                  # straight into any GIS workflow
+
+# or directly:
+gdf = TaiwanMOENVCollector().collect(as_geodataframe=True)
+```
+
+Records without a location keep a null geometry (the count is logged), so nothing
+is silently lost.
+
+## Adding CF metadata
+
+```python
 ds.attrs["title"] = "AquaScope Taiwan River Water Quality"
 ds.attrs["Conventions"] = "CF-1.8"
-ds.attrs["source"] = "Taiwan MOENV via AquaScope"
-
-# Rename columns to CF standard names where applicable
-ds = ds.rename({"water_temperature": "sea_water_temperature"})
-ds["sea_water_temperature"].attrs["units"] = "degree_Celsius"
+ds["DO"].attrs["standard_name"] = "mass_concentration_of_oxygen_in_sea_water"
 ```
 
-## Saving to NetCDF
+## Saving to NetCDF / Zarr
 
 ```python
 ds.to_netcdf("taiwan_wq.nc", engine="netcdf4")
-
-# Reload and verify
-ds2 = xr.open_dataset("taiwan_wq.nc")
-print(ds2)
+ds.to_zarr("taiwan_wq.zarr")                  # cloud-native, Dask-friendly
 ```
 
-## Time-Series Resampling
+## Time-series resampling
 
 ```python
-# Monthly mean per station
-monthly = ds.resample(timestamp="ME").mean()
+monthly = ds.resample(time="ME").mean()       # the time dim is named "time"
 monthly["DO"].plot(col="station_id", col_wrap=4)
 ```
 
-## Merging Multiple Sources
+## Merging multiple sources
 
 ```python
 from aquascope.collectors import USGSCollector
 
-usgs = USGSCollector()
-usgs_records = usgs.collect(site="09380000", days=365)
-df_usgs = pd.DataFrame([r.model_dump() for r in usgs_records])
-ds_usgs = xr.Dataset.from_dataframe(
-    df_usgs.set_index(["station_id", "timestamp"])
-)
+ds_tw = TaiwanMOENVCollector().collect(as_xarray=True)
+ds_us = USGSCollector().collect(as_xarray=True)
 
-# Merge along a new "source" dimension
 combined = xr.concat(
-    [ds.expand_dims("source"), ds_usgs.expand_dims("source")],
+    [ds_tw.expand_dims("source"), ds_us.expand_dims("source")],
     dim="source",
 )
 combined["source"] = ["taiwan_moenv", "usgs"]
 ```
 
-## Climate Analysis Example
-
-```python
-# Compute seasonal anomalies
-climatology = ds.groupby("timestamp.season").mean("timestamp")
-anomaly = ds.groupby("timestamp.season") - climatology
-anomaly["DO"].plot(col="season")
-```
-
 ## Tips
 
-- Use `engine="h5netcdf"` for HDF5-backed files when working with
-  large datasets.
-- Set `chunks={"timestamp": 100}` when opening to enable Dask-backed
-  lazy loading for out-of-core computation.
-- AquaScope's `scientific` extra includes everything you need for
-  NetCDF and HDF5 round-trips.
+- Use `engine="h5netcdf"` for HDF5-backed files with large datasets.
+- Open with `chunks={"time": 100}` to enable Dask-backed lazy loading.
+- A runnable end-to-end demo lives in `examples/11_interop_xarray.py`.
