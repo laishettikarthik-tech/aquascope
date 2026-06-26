@@ -11,7 +11,6 @@ from aquascope.utils.collect_many import (
     collect_many,
 )
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 def _ok(key: str, value: object = None):
