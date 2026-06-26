@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 import pandas as pd
 import pytest
+
+_HAS_STATSMODELS = importlib.util.find_spec("statsmodels") is not None
 
 
 def _make_ts(n: int = 365, freq: str = "D", start: str = "2020-01-01") -> pd.DataFrame:
@@ -47,6 +51,9 @@ class TestBaseHydroModel:
         assert metrics["nse"] > 0.95
 
 
+@pytest.mark.skipif(
+    not _HAS_STATSMODELS, reason="statsmodels not installed (aquascope[ml])"
+)
 class TestARIMAModel:
     def test_fit_predict(self):
         from aquascope.models.statistical import ARIMAModel

@@ -5,6 +5,10 @@ import os
 import numpy as np
 import pytest
 
+# The spatial module needs rasterio (the optional [spatial] extra). Skip the
+# whole module cleanly when it is absent instead of erroring on every test.
+pytest.importorskip("rasterio", reason="rasterio not installed (aquascope[spatial])")
+
 from aquascope.spatial.catchment_stats import CatchmentStats, compute_catchment_stats, stations_to_catchments
 from aquascope.spatial.dem import DEMData, compute_slope, fill_sinks, load_dem
 from aquascope.spatial.flow import extract_streams, flow_accumulation, flow_direction_d8
