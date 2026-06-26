@@ -7,6 +7,8 @@ The roadmap reflects what's shipped, what's in-flight, and what's planned. Open 
 - [x] 19 data source collectors (Taiwan ×7, USA ×2, Global ×4, FAO ×2, EU, Japan, Korea, India)
 - [x] Rule-based + LLM methodology recommender (26 methods, OpenAI / Groq / HuggingFace / Ollama)
 - [x] 7 auto-executable analysis pipelines
+- [x] GR4J conceptual rainfall-runoff model + auto-calibration (NSE / KGE / log-NSE)
+- [x] Model-evaluation metrics (NSE, KGE, PBIAS, RMSE, R²)
 - [x] Bulletin 17C flood frequency with EMA
 - [x] FAO-56 Penman-Monteith + crop water requirements (single Kc + dual Kcb/Ke modes)
 - [x] Baseflow separation (Eckhardt, Lyne-Hollick, UKIH smoothed-minima)
@@ -40,8 +42,7 @@ The roadmap reflects what's shipped, what's in-flight, and what's planned. Open 
 
 Ambitious, high-impact work that takes AquaScope to the next level. These are [`major feature`](https://github.com/Rekin226/aquascope/labels/major%20feature) · `help wanted` — larger than a weekend, mentorship available. Comment on the issue to discuss scope before starting.
 
-- [ ] Conceptual rainfall-runoff model (GR4J) + auto-calibration with NSE/KGE ([#52](https://github.com/Rekin226/aquascope/issues/52)) — *keystone: feeds #53 and #56*
-- [ ] Prediction in Ungauged Basins — regionalize signatures/parameters ([#53](https://github.com/Rekin226/aquascope/issues/53))
+- [ ] Prediction in Ungauged Basins — regionalize signatures/parameters ([#53](https://github.com/Rekin226/aquascope/issues/53)) — *now unblocked by the shipped GR4J keystone*
 - [ ] Declarative, reproducible study runner `aquascope run study.yaml` with provenance ([#54](https://github.com/Rekin226/aquascope/issues/54))
 - [ ] Plugin architecture — third-party collectors & methodologies via entry points ([#55](https://github.com/Rekin226/aquascope/issues/55))
 - [ ] Large-sample CAMELS benchmark — automated accuracy report ([#56](https://github.com/Rekin226/aquascope/issues/56))
