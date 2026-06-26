@@ -91,7 +91,7 @@ class TestAridityIndex:
             aridity_index(100, 0)
             assert False, "Expected ValueError"
         except ValueError:
-            pass 
+            pass
 
     def test_dry_sub_humid(self):
         result = aridity_index(600, 1000)
@@ -246,7 +246,7 @@ class TestPrecipitationConcentrationIndex:
             precipitation_concentration_index(pd.Series([10.0] * 6))
             assert False, "Expected ValueError"
         except ValueError:
-            pass 
+            pass
 
     def test_multi_year_uses_first_12(self):
         monthly = pd.Series(np.full(24, 100.0))
