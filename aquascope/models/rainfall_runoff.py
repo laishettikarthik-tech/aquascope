@@ -21,6 +21,7 @@ Perrin, C., Michel, C., & Andreassian, V. (2003). Improvement of a
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -376,4 +377,171 @@ def calibrate(
         objective_name=objective,
         n_iterations=int(opt_result.nit),
         simulated=best_sim.streamflow,
+    )
+
+
+# ── Uncertainty quantification ────────────────────────────────────────────
+
+
+@dataclass
+class GR4JProbabilisticResult:
+    """Probabilistic GR4J prediction.
+
+    Attributes
+    ----------
+    median : pd.Series
+        Central (q=0.5) streamflow estimate (mm/day).
+    quantiles : dict[float, pd.Series]
+        Predictive quantile bands keyed by quantile level (e.g. 0.05,
+        0.95), each a streamflow series aligned with the input index.
+        Bands are non-negative and monotonic in the quantile level.
+    params : dict
+        Calibrated GR4J parameters (X1-X4) underlying the prediction.
+    method : str
+        How the bands were produced: ``"residual"`` or ``"ensemble"``.
+    """
+
+    median: pd.Series
+    quantiles: dict[float, pd.Series]
+    params: dict[str, float]
+    method: str
+
+
+def residual_quantile_bands(
+    simulated: pd.Series,
+    observed: pd.Series,
+    quantiles: Sequence[float] = (0.05, 0.25, 0.5, 0.75, 0.95),
+    *,
+    warmup_days: int = 0,
+    heteroscedastic: bool = False,
+    eps: float = 1e-6,
+) -> dict[float, pd.Series]:
+    """Predictive quantile bands from the empirical residual distribution.
+
+    Fits residuals ``obs - sim`` over the post-warmup period, then offsets the
+    simulated series by their quantiles. With ``heteroscedastic=True`` the
+    residuals are taken relative to flow magnitude — ``(obs - sim) / (sim +
+    eps)`` — so bands widen at high flows, which better matches streamflow
+    error structure. Bands are clipped to be non-negative and sorted so that
+    lower quantiles never exceed higher ones at any time step.
+    """
+    sim = simulated.astype(float)
+    obs = observed.astype(float)
+    sim_eval = sim.values[warmup_days:]
+    obs_eval = obs.values[warmup_days:]
+    mask = np.isfinite(sim_eval) & np.isfinite(obs_eval)
+    se, oe = sim_eval[mask], obs_eval[mask]
+    if len(se) == 0:
+        raise ValueError("No finite paired (simulated, observed) values for residuals.")
+
+    qs = sorted(quantiles)
+    sim_all = sim.values
+    if heteroscedastic:
+        rel = (oe - se) / (se + eps)
+        offsets = [np.quantile(rel, q) * (sim_all + eps) for q in qs]
+    else:
+        resid = oe - se
+        offsets = [np.full_like(sim_all, np.quantile(resid, q)) for q in qs]
+
+    stacked = np.clip(np.vstack([sim_all + off for off in offsets]), 0.0, None)
+    # Enforce monotonicity across quantile levels per time step (clipping at 0
+    # can otherwise tie or invert the lowest bands).
+    stacked = np.sort(stacked, axis=0)
+    return {
+        q: pd.Series(stacked[i], index=sim.index, name=f"q{q:g}")
+        for i, q in enumerate(qs)
+    }
+
+
+def _parameter_ensemble_bands(
+    best_params: dict[str, float],
+    precip: pd.Series,
+    pet: pd.Series,
+    quantiles: Sequence[float],
+    n_members: int,
+    perturb: float,
+    seed: int | None,
+    warmup_days: int,
+) -> dict[float, pd.Series]:
+    """Quantile bands from an ensemble of parameter-perturbed simulations.
+
+    Each member adds Gaussian noise (sigma = ``perturb`` x the parameter's
+    bound width) to the calibrated X1-X4, clipped to the GR4J bounds, then
+    simulates. Bands are the empirical quantiles across members per time step.
+    """
+    rng = np.random.default_rng(seed)
+    order = ["X1", "X2", "X3", "X4"]
+    sims = []
+    for _ in range(n_members):
+        p = {}
+        for k in order:
+            lo, hi = GR4J_PARAM_BOUNDS[k]
+            val = best_params[k] + rng.normal(0.0, perturb * (hi - lo))
+            p[k] = float(np.clip(val, lo, hi))
+        model = GR4J(x1=p["X1"], x2=p["X2"], x3=p["X3"], x4=p["X4"])
+        sims.append(model.simulate(precip, pet, warmup_days=warmup_days).streamflow.values)
+    ens = np.vstack(sims)
+    idx = precip.index
+    return {
+        q: pd.Series(np.clip(np.quantile(ens, q, axis=0), 0.0, None), index=idx, name=f"q{q:g}")
+        for q in sorted(quantiles)
+    }
+
+
+def predict_quantiles(
+    precip: pd.Series,
+    pet: pd.Series,
+    observed: pd.Series,
+    quantiles: Sequence[float] = (0.05, 0.25, 0.5, 0.75, 0.95),
+    *,
+    method: str = "residual",
+    objective: str = "kge",
+    warmup_days: int = 365,
+    heteroscedastic: bool = True,
+    n_members: int = 50,
+    perturb: float = 0.05,
+    seed: int | None = 42,
+    maxiter: int = 100,
+) -> GR4JProbabilisticResult:
+    """Calibrate GR4J and produce calibrated predictive quantile bands.
+
+    Two methods:
+
+    - ``"residual"`` (default): the deterministic simulation offset by
+      empirical residual quantiles (see :func:`residual_quantile_bands`).
+      Fast, and the natural citable path for adding UQ to GR4J.
+    - ``"ensemble"``: an ensemble of parameter-perturbed simulations
+      (see :func:`_parameter_ensemble_bands`). Captures parameter
+      uncertainty but is ``n_members`` times more expensive.
+
+    The deterministic :meth:`GR4J.simulate` path is unchanged; UQ is opt-in.
+    """
+    if method not in ("residual", "ensemble"):
+        raise ValueError(f"method must be 'residual' or 'ensemble'; got {method!r}.")
+
+    cal = calibrate(
+        precip,
+        pet,
+        observed,
+        objective=objective,
+        warmup_days=warmup_days,
+        seed=seed,
+        maxiter=maxiter,
+    )
+    best = GR4J(**{k.lower(): v for k, v in cal.params.items()})
+    sim = best.simulate(precip, pet, warmup_days=warmup_days).streamflow
+
+    qs = sorted(quantiles)
+    if method == "residual":
+        bands = residual_quantile_bands(
+            sim, observed, qs, warmup_days=warmup_days, heteroscedastic=heteroscedastic
+        )
+    else:
+        bands = _parameter_ensemble_bands(
+            cal.params, precip, pet, qs, n_members, perturb, seed, warmup_days
+        )
+
+    median = bands.get(0.5, sim)
+    return GR4JProbabilisticResult(
+        median=median, quantiles=bands, params=cal.params, method=method
     )
