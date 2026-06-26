@@ -10,11 +10,11 @@ tags:
   - FAO-56
   - evapotranspiration
 authors:
-  - name: AquaScope Contributors
-    orcid: 0000-0000-0000-0000
+  - name: Ouedraogo Abdoul Rachid
+    orcid: 0000-0002-4616-4153
     affiliation: 1
 affiliations:
-  - name: Independent Researchers
+  - name: National Central University, Taiwan
     index: 1
 date: 26 June 2026
 bibliography: paper.bib
@@ -244,7 +244,7 @@ analysis to methodology guidance.
 
 AquaScope builds upon the scientific Python ecosystem, particularly pandas
 [@McKinney2010], NumPy [@Harris2020], SciPy [@Virtanen2020], and Pydantic
-[@Pydantic2024]. The authors thank the maintainers of these foundational libraries,
+[@Pydantic2024]. The author thanks the maintainers of these foundational libraries,
 as well as the data providers—USGS, Taiwan MOENV, FAO, UN Environment Programme, and
 the Copernicus Climate Data Store—whose open data policies make integrated water
 resources research possible. The groundwater analysis capabilities draw on the
