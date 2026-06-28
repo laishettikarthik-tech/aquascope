@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from aquascope.collectors.base import BaseCollector
+from aquascope.schemas.groundwater import GroundwaterLevel
 from aquascope.schemas.water_data import (
     DataSource,
     GeoLocation,
@@ -26,6 +27,34 @@ from aquascope.schemas.water_data import (
 from aquascope.utils.http_client import CachedHTTPClient, RateLimiter
 
 logger = logging.getLogger(__name__)
+
+# WRA encodes "no data" as large negative sentinels (e.g. -999998). Any value
+# at or below this magnitude is missing, not a real groundwater level.
+_GW_SENTINEL_THRESHOLD = -9999.0
+
+# Annual statistic -> field name in the WRA annual-groundwater dataset.
+_GW_STATISTIC_FIELDS = {
+    "average": "annualaveragewaterlevel",
+    "maximum": "annualmaximumdailywaterlevel",
+    "minimum": "annualminimumdailywaterlevel",
+}
+
+
+def _parse_gw_value(raw: object) -> float | None:
+    """Parse a WRA groundwater value, returning None for missing/sentinel.
+
+    Empty strings and the large-negative no-data sentinels (e.g. -999998)
+    map to None so callers can decide how to represent missing data.
+    """
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if val <= _GW_SENTINEL_THRESHOLD:
+        return None
+    return val
 
 # Coordinate field names seen across WRA dataset variants (TWD97 / WGS84).
 _LAT_KEYS = ("Latitude", "latitude", "TWD97Lat", "lat", "LAT", "Y")
@@ -164,3 +193,85 @@ class TaiwanWRAReservoirCollector(BaseCollector):
             except (ValueError, KeyError, TypeError) as exc:
                 logger.debug("Skipping reservoir record: %s", exc)
         return records
+
+
+class TaiwanWRAGroundwaterCollector(BaseCollector):
+    """Collect annual groundwater-level statistics from WRA.
+
+    Source: WRA annual-groundwater dataset (``GROUNDWATER_ANNUAL_DATASET``),
+    ~992 wells nationwide, one record per well per year (1992-present), with
+    annual average / maximum-daily / minimum-daily water levels.
+
+    Parameters
+    ----------
+    statistic : str
+        Which annual statistic to emit as ``water_level_m``: ``"average"``
+        (default), ``"maximum"``, or ``"minimum"``. Use ``"average"`` for
+        trend analysis and ``"minimum"`` for drought-severity work.
+    na_value : float | None
+        How to represent missing values (WRA's ``-999998`` sentinels and
+        empty fields). ``None`` (default) drops the record entirely, which is
+        the safe choice for trend/drawdown analysis. Pass ``float("nan")`` to
+        keep a placeholder year, or a number (e.g. ``0.0``) to substitute a
+        constant — but note that substituting ``0`` injects a real-looking
+        zero-elevation reading that will distort trend and drawdown results.
+    """
+
+    name = "taiwan_wra_groundwater"
+
+    def __init__(
+        self,
+        statistic: str = "average",
+        na_value: float | None = None,
+        client: CachedHTTPClient | None = None,
+    ):
+        if statistic not in _GW_STATISTIC_FIELDS:
+            raise ValueError(
+                f"statistic must be one of {list(_GW_STATISTIC_FIELDS)}; got {statistic!r}."
+            )
+        super().__init__(
+            client
+            or CachedHTTPClient(
+                base_url=WRA_BASE,
+                rate_limiter=RateLimiter(max_calls=15, period_seconds=60),
+                cache_ttl_seconds=86400,  # annual data: cache for a day
+                verify=False,
+            )
+        )
+        self.statistic = statistic
+        self.na_value = na_value
+
+    def fetch_raw(self, **kwargs) -> list[dict]:
+        data = self.client.get_json(GROUNDWATER_ANNUAL_DATASET)
+        return data if isinstance(data, list) else data.get("responseData", data.get("records", []))
+
+    def normalise(self, raw: list[dict]) -> Sequence[GroundwaterLevel]:
+        field = _GW_STATISTIC_FIELDS[self.statistic]
+        readings: list[GroundwaterLevel] = []
+        for rec in raw:
+            try:
+                well = rec.get("wellidentifier")
+                year = rec.get("year")
+                if not well or not year:
+                    continue
+
+                level = _parse_gw_value(rec.get(field))
+                if level is None:
+                    if self.na_value is None:
+                        continue  # drop missing-data well-years
+                    level = self.na_value
+
+                readings.append(
+                    GroundwaterLevel(
+                        source=DataSource.TAIWAN_WRA,
+                        station_id=str(well),
+                        # Annual value: stamp mid-year as the series centroid.
+                        measurement_datetime=datetime(int(year), 7, 1),
+                        water_level_m=level,
+                        unit="m",
+                        location=_extract_location(rec),
+                    )
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                logger.debug("Skipping WRA groundwater record: %s", exc)
+        return readings
