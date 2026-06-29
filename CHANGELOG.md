@@ -26,6 +26,12 @@ All notable changes to AquaScope are documented here.
   rate-limit, and body-keyed disk-cache behaviour of `get_json()` (previously
   a thin wrapper with no body, retries, or caching).
 
+### Fixed
+- `TaiwanWRAGroundwaterDailyCollector` now drops the gweb missing-data sentinel
+  (`-9998`) and de-duplicates window overlaps (the portal can return data past
+  the requested `endDate`, so the same well-day appeared twice with different
+  values; the later window now wins). Previously these leaked into the series.
+
 ## [0.7.0] — 2026-06-26
 
 Interoperability and uncertainty: AquaScope now composes with the scientific-Python

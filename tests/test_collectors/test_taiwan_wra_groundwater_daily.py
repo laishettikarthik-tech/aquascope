@@ -113,6 +113,44 @@ def test_bad_aggregate_raises():
         TaiwanWRAGroundwaterDailyCollector(aggregate="weekly")
 
 
+class _SentinelOverrunFake:
+    """One well, two windows; window 1's array overruns into window 2's range
+    (with a different value) and contains a -9998 sentinel."""
+
+    def get_text(self, path, headers=None, use_cache=True):
+        return ""
+
+    def post_json(self, path, json_body=None, headers=None, use_cache=True):
+        if path == _GWEB_HISTORY:
+            return {"AVG_MIN_DATE": "2020-01-01", "AVG_MAX_DATE": "2021-06-30"}
+        if path == _GWEB_CHART:
+            start = date.fromisoformat(json_body["startDate"])
+            if start.year == 2020:  # window 1: overruns 14 days into 2021, value 10
+                data = [(-9998.0 if i == 5 else 10.0) for i in range(380)]
+            else:                   # window 2: value 20 (should win on overlap)
+                data = [20.0 for _ in range(181)]
+            return {"WaterLevelData": data}
+        raise AssertionError(f"unexpected path {path}")
+
+
+def test_sentinel_drop_and_window_dedup():
+    from datetime import date as _date
+
+    c = TaiwanWRAGroundwaterDailyCollector(
+        stations=["W1"], aggregate="daily", window_years=1, with_metadata=False,
+        client=_SentinelOverrunFake(),
+    )
+    recs = c.collect()
+    dates = [r.measurement_datetime.date() for r in recs]
+    # No duplicate well-days despite the overrunning window.
+    assert len(dates) == len(set(dates))
+    # The -9998 sentinel day (2020-01-06) is dropped.
+    assert _date(2020, 1, 6) not in dates
+    # On the overlap, the later window wins (value 20, not 10).
+    overlap = [r.water_level_m for r in recs if r.measurement_datetime.date() == _date(2021, 1, 1)]
+    assert overlap == [pytest.approx(20.0)]
+
+
 def test_well_metadata_builder_keys_by_gw_suffix_and_name():
     rows = [{
         "wellidentifier": "3132014GW07010211", "wellname": "東芳(1)",
