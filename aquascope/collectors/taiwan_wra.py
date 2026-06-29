@@ -379,6 +379,10 @@ _GWEB_AREA_LIST = f"{_GWEB_QUERY}/GetGWAreaList"
 _GWEB_STATION_LIST = f"{_GWEB_QUERY}/GetGWStationList"
 _GWEB_HISTORY = f"{_GWEB_QUERY}/GetHistoryWaterLevel"
 _GWEB_CHART = f"{_GWEB_QUERY}/GetStationChartData"
+# gweb encodes missing daily values as a large negative sentinel (-9998),
+# distinct from the open-data annual sentinel (-999998). Treat anything at or
+# below -9990 as missing.
+_GWEB_SENTINEL = -9990.0
 
 # English aliases for the 11 groundwater zones (accepted in `zones=`).
 _GWEB_ZONE_ALIASES = {
@@ -590,8 +594,13 @@ class TaiwanWRAGroundwaterDailyCollector(BaseCollector):
         return _parse_date(h.get("AVG_MIN_DATE")), _parse_date(h.get("AVG_MAX_DATE"))
 
     def _daily_series(self, station_no: str, lo: date, hi: date) -> list[tuple[date, float]]:
-        """Stitch the daily series over [lo, hi] in windowed chart pulls."""
-        out: list[tuple[date, float]] = []
+        """Stitch the daily series over [lo, hi] in windowed chart pulls.
+
+        Keyed by date so overlapping windows (the portal can return data past the
+        requested ``endDate``) de-duplicate, with the later window winning;
+        missing-data sentinels are dropped.
+        """
+        series: dict[date, float] = {}
         w_start = lo
         while w_start <= hi:
             w_end = min(date(w_start.year + self.window_years, w_start.month, 1)
@@ -606,11 +615,14 @@ class TaiwanWRAGroundwaterDailyCollector(BaseCollector):
                 if v is None:
                     continue
                 try:
-                    out.append((w_start + timedelta(days=i), float(v)))
+                    fv = float(v)
                 except (TypeError, ValueError):
                     continue
+                if fv <= _GWEB_SENTINEL:  # missing-data sentinel (e.g. -9998)
+                    continue
+                series[w_start + timedelta(days=i)] = fv
             w_start = w_end + timedelta(days=1)
-        return out
+        return sorted(series.items())
 
     # ── BaseCollector contract ───────────────────────────────────────
     def fetch_raw(self, **kwargs) -> list[dict]:
