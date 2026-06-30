@@ -32,17 +32,6 @@ class TestPalmerDroughtSeverityIndex:
         result = palmer_drought_severity_index(self.precip, self.pet)
         assert (result.index == self.precip.index).all()
 
-  def test_drought_signal(self):
-        """Very dry series should produce negative SPI."""
-        from aquascope.climate.indices import spi
-        rng = np.random.default_rng(7)
-        idx = pd.date_range("2000-01-01", periods=120, freq="MS")
-        dry = pd.Series(rng.gamma(shape=2.0, scale=0.5, size=120), index=idx)
-        wet = pd.Series(rng.gamma(shape=2.0, scale=100.0, size=120), index=idx)
-        dry_result = spi(dry, scale=3)
-        wet_result = spi(wet, scale=3)
-        assert dry_result.spi.dropna().mean() < wet_result.spi.dropna().mean()
-
     def test_wet_signal(self):
         idx = pd.date_range("2000-01-01", periods=60, freq="MS")
         wet_precip = pd.Series(np.full(60, 200.0), index=idx)
@@ -354,9 +343,10 @@ class TestSPI:
     def test_drought_signal(self):
         """Very dry series should produce negative SPI."""
         from aquascope.climate.indices import spi
+        rng = np.random.default_rng(7)
         idx = pd.date_range("2000-01-01", periods=120, freq="MS")
-        dry = pd.Series(np.full(120, 1.0), index=idx)
-        wet = pd.Series(np.full(120, 200.0), index=idx)
+        dry = pd.Series(rng.gamma(shape=2.0, scale=0.5, size=120), index=idx)
+        wet = pd.Series(rng.gamma(shape=2.0, scale=100.0, size=120), index=idx)
         dry_result = spi(dry, scale=3)
         wet_result = spi(wet, scale=3)
         assert dry_result.spi.dropna().mean() < wet_result.spi.dropna().mean()
