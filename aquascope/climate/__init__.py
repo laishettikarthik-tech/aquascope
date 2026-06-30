@@ -14,12 +14,15 @@ from aquascope.climate.indices import (
     CDDResult,
     CWDResult,
     HeatWaveResult,
+    SPIResult,
     aridity_index,
     consecutive_dry_days,
     consecutive_wet_days,
+    drought_class,
     heat_wave_index,
     palmer_drought_severity_index,
     precipitation_concentration_index,
+    spi,
 )
 from aquascope.climate.scenarios import (
     DroughtStats,
@@ -45,17 +48,20 @@ __all__ = [
     "evaluate_downscaling",
     "quantile_delta_mapping",
     "quantile_mapping",
-    # indices
+   # indices
     "AridityResult",
     "CDDResult",
     "CWDResult",
     "HeatWaveResult",
+    "SPIResult",
     "aridity_index",
     "consecutive_dry_days",
     "consecutive_wet_days",
+    "drought_class",
     "heat_wave_index",
     "palmer_drought_severity_index",
     "precipitation_concentration_index",
+    "spi",
     # scenarios
     "DroughtStats",
     "ReturnPeriodShift",
