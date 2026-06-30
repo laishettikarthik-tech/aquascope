@@ -5,6 +5,12 @@ All notable changes to AquaScope are documented here.
 ## [Unreleased]
 
 ### Added
+- **Worked example** (`examples/13_groundwater_drought_sgi.py`): an end-to-end
+  case study, data to result, characterising Taiwan's 2020-2021 groundwater
+  drought. AquaScope collects daily groundwater (`TaiwanWRAGroundwaterDailyCollector`)
+  and ERA5 rainfall (`OpenMeteoCollector`) for representative aquifers, computes
+  SGI and SPI, and reports each aquifer's drought-propagation timescale (7-23
+  months) and 2021 drought severity (SGI down to ~-2, severe).
 - **Drought indices** (`groundwater/drought.py`, `climate/indices.py`):
   `standardised_groundwater_index()` (SGI, Bloomfield & Marchant 2013: per
   calendar-month non-parametric normal-scores transform) and
