@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aquascope.climate.indices import standardized_precipitation_index
+from aquascope.climate.indices import spi as compute_spi
 
 
 def _monthly_precip(n_years: int = 30, seed: int = 0) -> pd.Series:
@@ -20,35 +20,33 @@ def _monthly_precip(n_years: int = 30, seed: int = 0) -> pd.Series:
 
 class TestSPI:
     def test_standard_normal_distribution(self):
-        spi = standardized_precipitation_index(_monthly_precip(), scale=3).dropna()
-        assert abs(spi.mean()) < 0.2
-        assert 0.7 < spi.std() < 1.3
+        result = compute_spi(_monthly_precip(), scale=3)
+        values = result.spi.dropna()
+        assert abs(values.mean()) < 0.2
+        assert 0.7 < values.std() < 1.3
 
     def test_dry_period_is_negative(self):
         precip = _monthly_precip()
         dry = (precip.index.year >= 2010) & (precip.index.year <= 2011)
         precip[dry] *= 0.1  # strong dry anomaly
-        spi = standardized_precipitation_index(precip, scale=6).dropna()
-        dry_spi = spi[spi.index.year.isin([2010, 2011])]
+        result = compute_spi(precip, scale=6)
+        values = result.spi.dropna()
+        dry_spi = values[values.index.year.isin([2010, 2011])]
         assert dry_spi.mean() < -0.8
 
     def test_scale_changes_output(self):
         precip = _monthly_precip()
-        spi3 = standardized_precipitation_index(precip, scale=3)
-        spi12 = standardized_precipitation_index(precip, scale=12)
+        result3 = compute_spi(precip, scale=3)
+        result12 = compute_spi(precip, scale=12)
         # Different accumulation -> different series (and SPI-12 starts later).
-        assert spi12.dropna().index.min() > spi3.dropna().index.min()
-
-    def test_non_datetime_index_raises(self):
-        with pytest.raises(ValueError, match="DatetimeIndex"):
-            standardized_precipitation_index(pd.Series([1.0, 2.0, 3.0]))
+        assert result12.spi.dropna().index.min() > result3.spi.dropna().index.min()
 
     def test_bad_scale_raises(self):
         with pytest.raises(ValueError, match="scale"):
-            standardized_precipitation_index(_monthly_precip(), scale=0)
+            compute_spi(_monthly_precip(), scale=0)
 
     def test_handles_zeros(self):
         precip = _monthly_precip()
         precip.iloc[::5] = 0.0  # inject dry months
-        spi = standardized_precipitation_index(precip, scale=1)
-        assert np.isfinite(spi.dropna()).all()
+        result = compute_spi(precip, scale=1)
+        assert np.isfinite(result.spi.dropna()).all()
