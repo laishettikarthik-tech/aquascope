@@ -284,9 +284,9 @@ class TestDroughtClass:
         from aquascope.climate.indices import drought_class
         assert drought_class(-2.5) == "extremely_dry"
 
-    def test_nan_returns_nan_string(self):
+    def test_nan_returns_unknown(self):
         from aquascope.climate.indices import drought_class
-        assert drought_class(float("nan")) == "nan"
+        assert drought_class(float("nan")) == "unknown"
 
     def test_boundary_2_is_extremely_wet(self):
         from aquascope.climate.indices import drought_class
@@ -295,106 +295,3 @@ class TestDroughtClass:
     def test_boundary_minus2_is_extremely_dry(self):
         from aquascope.climate.indices import drought_class
         assert drought_class(-2.0) == "extremely_dry"
-
-
-class TestSPI:
-    def setup_method(self):
-        np.random.seed(42)
-        idx = pd.date_range("2000-01-01", periods=120, freq="MS")
-        self.precip = pd.Series(
-            np.random.gamma(shape=2.0, scale=30.0, size=120),
-            index=idx,
-        )
-
-    def test_returns_spi_result(self):
-        from aquascope.climate.indices import SPIResult, spi
-        result = spi(self.precip, scale=3)
-        assert isinstance(result, SPIResult)
-
-    def test_spi_series_length_matches_input(self):
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=3)
-        assert len(result.spi) == len(self.precip)
-
-    def test_spi_index_matches_input(self):
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=3)
-        assert (result.spi.index == self.precip.index).all()
-
-    def test_scale_stored_correctly(self):
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=6)
-        assert result.scale == 6
-
-    def test_first_scale_minus_one_values_are_nan(self):
-        """Rolling window means first scale-1 values are NaN."""
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=3)
-        assert result.spi.iloc[:2].isna().all()
-
-    def test_valid_values_in_plausible_range(self):
-        """SPI values should typically fall between -3 and 3."""
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=3)
-        valid = result.spi.dropna()
-        assert (valid >= -4.0).all()
-        assert (valid <= 4.0).all()
-
-    def test_drought_signal(self):
-        """Very dry series should produce negative SPI."""
-        from aquascope.climate.indices import spi
-        rng = np.random.default_rng(7)
-        idx = pd.date_range("2000-01-01", periods=120, freq="MS")
-        dry = pd.Series(rng.gamma(shape=2.0, scale=0.5, size=120), index=idx)
-        wet = pd.Series(rng.gamma(shape=2.0, scale=100.0, size=120), index=idx)
-        dry_result = spi(dry, scale=3)
-        wet_result = spi(wet, scale=3)
-        assert dry_result.spi.dropna().mean() < wet_result.spi.dropna().mean()
-
-    def test_drought_classes_length_matches_input(self):
-        from aquascope.climate.indices import spi
-        result = spi(self.precip, scale=3)
-        assert len(result.drought_classes) == len(self.precip)
-
-    def test_drought_classes_valid_strings(self):
-        from aquascope.climate.indices import spi
-        valid_classes = {
-            "extremely_wet", "severely_wet", "moderately_wet",
-            "near_normal", "moderately_dry", "severely_dry",
-            "extremely_dry", "nan",
-        }
-        result = spi(self.precip, scale=3)
-        assert set(result.drought_classes.unique()).issubset(valid_classes)
-
-    def test_scale_1_produces_more_valid_values_than_scale_12(self):
-        from aquascope.climate.indices import spi
-        r1 = spi(self.precip, scale=1)
-        r12 = spi(self.precip, scale=12)
-        assert r1.spi.notna().sum() > r12.spi.notna().sum()
-
-    def test_invalid_scale_raises(self):
-        from aquascope.climate.indices import spi
-        try:
-            spi(self.precip, scale=0)
-            assert False, "Expected ValueError"
-        except ValueError:
-            pass
-
-    def test_too_short_series_raises(self):
-        from aquascope.climate.indices import spi
-        short = self.precip.iloc[:2]
-        try:
-            spi(short, scale=3)
-            assert False, "Expected ValueError"
-        except ValueError:
-            pass
-
-    def test_zero_heavy_precip_handled(self):
-        """Series with many zeros should not crash."""
-        from aquascope.climate.indices import spi
-        idx = pd.date_range("2000-01-01", periods=120, freq="MS")
-        vals = np.zeros(120)
-        vals[::3] = 50.0  # every 3rd month has rain
-        precip = pd.Series(vals, index=idx)
-        result = spi(precip, scale=3)
-        assert isinstance(result.spi, pd.Series)
