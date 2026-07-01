@@ -442,23 +442,68 @@ def precipitation_concentration_index(precip_monthly: pd.Series) -> float:
 
     return float(np.sum(p**2) / total**2 * 100)
 
-@dataclass
-class SPIResult:
-    """Result of Standardized Precipitation Index computation.
+def standardized_precipitation_index(
+    precip_monthly: pd.Series,
+    scale: int = 3,
+    per_month: bool = True,
+    min_per_group: int = 10,
+) -> pd.Series:
+    """Standardized Precipitation Index (SPI), McKee et al. (1993).
 
-    Attributes
+    Monthly precipitation is accumulated over ``scale`` months, a gamma
+    distribution is fitted (with explicit zero handling), and the cumulative
+    probability is mapped to a standard-normal score. The result is unitless,
+    centred on zero, with SPI < -1 indicating meteorological drought; it is
+    directly comparable to the Standardised Groundwater Index for
+    drought-propagation analysis.
+
+    Parameters
     ----------
-    spi : pd.Series
-        SPI values on the same monthly index as the input precipitation.
-    scale : int
-        Accumulation window in months used for the SPI.
-    drought_classes : pd.Series
-        Categorical drought/wet classification for each month.
-    """
+    precip_monthly:
+        Monthly precipitation totals (mm) with a ``DatetimeIndex``.
+    scale:
+        Accumulation period in months (e.g. 3 -> SPI-3). Larger scales capture
+        longer droughts that propagate to groundwater.
+    per_month:
+        When ``True`` (default), fit a separate gamma per calendar month, which
+        removes the seasonal cycle (standard practice). When ``False``, fit one
+        gamma to all accumulated values.
+    min_per_group:
+        Minimum positive values needed to fit a gamma for a group; groups with
+        fewer yield ``NaN``.
 
-    spi: pd.Series
-    scale: int
-    drought_classes: pd.Series
+    Returns
+    -------
+    pd.Series
+        SPI indexed like the accumulated series, named ``"spi"``.
+    """
+    if not isinstance(precip_monthly.index, pd.DatetimeIndex):
+        raise ValueError("precip_monthly must have a DatetimeIndex.")
+    if scale < 1:
+        raise ValueError("scale must be >= 1 month.")
+    s = precip_monthly.sort_index().astype(float)
+    acc = s.rolling(scale).sum().dropna()
+    if acc.empty:
+        raise ValueError("Series too short for the requested accumulation scale.")
+
+    spi = pd.Series(np.nan, index=acc.index, dtype=float, name="spi")
+    groups = (range(1, 13) if per_month else [None])
+    for g in groups:
+        idx = acc.index if g is None else acc.index[acc.index.month == g]
+        vals = acc.loc[idx]
+        pos = vals[vals > 0]
+        if len(pos) < min_per_group:
+            logger.debug("SPI group %s has %d positive obs (< %d); left NaN.",
+                         g, len(pos), min_per_group)
+            continue
+        # Mixed distribution: point mass at zero (prob q) + gamma on positives.
+        q = float((vals == 0).mean())
+        a, loc, scl = stats.gamma.fit(pos.values, floc=0.0)
+        cdf = q + (1.0 - q) * stats.gamma.cdf(vals.values, a, loc=loc, scale=scl)
+        cdf = np.where(vals.values == 0, q / 2.0, cdf)  # zeros -> lower half of mass
+        cdf = np.clip(cdf, 1e-6, 1 - 1e-6)
+        spi.loc[idx] = stats.norm.ppf(cdf)
+    return spi
 
 
 def drought_class(spi_value: float) -> str:
@@ -475,7 +520,7 @@ def drought_class(spi_value: float) -> str:
         One of: ``'extremely_wet'``, ``'severely_wet'``,
         ``'moderately_wet'``, ``'near_normal'``,
         ``'moderately_dry'``, ``'severely_dry'``, ``'extremely_dry'``,
-        or ``'nan'`` for missing values.
+        or ``'unknown'`` for missing values.
 
     References
     ----------
@@ -485,7 +530,7 @@ def drought_class(spi_value: float) -> str:
         Anaheim, California. American Meteorological Society.
     """
     if np.isnan(spi_value):
-        return "nan"
+        return "unknown"
     if spi_value >= 2.0:
         return "extremely_wet"
     if spi_value >= 1.5:
@@ -499,117 +544,3 @@ def drought_class(spi_value: float) -> str:
     if spi_value > -2.0:
         return "severely_dry"
     return "extremely_dry"
-
-
-def spi(
-    precipitation: pd.Series,
-    scale: int = 3,
-) -> SPIResult:
-    """Compute the Standardized Precipitation Index (SPI).
-
-    Aggregates precipitation over a rolling *scale*-month window, fits a
-    two-parameter gamma distribution **per calendar month** (to remove
-    seasonality), and transforms the cumulative probability to the
-    standard normal — yielding the SPI value.
-
-    Zero-precipitation months are handled via a mixed distribution:
-    the probability of zero precipitation is estimated separately and
-    combined with the gamma CDF before the normal transform, following
-    the WMO (2012) SPI User Guide.
-
-    Parameters
-    ----------
-    precipitation : pd.Series
-        Monthly precipitation totals (mm) with a ``DatetimeIndex``.
-        Must span at least ``scale + 1`` months.
-    scale : int
-        Accumulation window in months (e.g. 1, 3, 6, 12).  Default 3.
-
-    Returns
-    -------
-    SPIResult
-        SPI values, scale used, and drought classifications.
-
-    Raises
-    ------
-    ValueError
-        If *scale* < 1 or the series has fewer than ``scale + 1`` values.
-
-   References
-    ----------
-    McKee, T. B., Doesken, N. J., & Kleist, J. (1993). The relationship
-        of drought frequency and duration to time scales. Proceedings of
-        the 8th Conference on Applied Climatology. AMS.
-    World Meteorological Organization (2012). Standardized Precipitation
-        Index User Guide. WMO-No. 1090. Geneva.
-    """
-    if scale < 1:
-        raise ValueError(f"scale must be >= 1, got {scale}")
-    if len(precipitation) < scale + 1:
-        raise ValueError(
-            f"Need at least scale+1={scale + 1} values, got {len(precipitation)}"
-        )
-
-    # Rolling accumulation over the scale window.
-    rolled = precipitation.rolling(window=scale, min_periods=scale).sum()
-
-    spi_vals = np.full(len(rolled), np.nan)
-    idx = rolled.index
-
-    # Fit and transform per calendar month to remove seasonality.
-    for month in range(1, 13):
-        month_mask = idx.month == month
-        month_positions = np.where(month_mask)[0]
-        month_vals = rolled.iloc[month_positions].values.astype(float)
-
-        # Drop NaNs introduced by the rolling window.
-        valid_mask = ~np.isnan(month_vals)
-        valid_vals = month_vals[valid_mask]
-        valid_positions = month_positions[valid_mask]
-
-        if len(valid_vals) < 4:
-            # Too few data points to fit reliably — leave as NaN.
-            continue
-
-        # Mixed distribution: probability of zero + gamma CDF for positives.
-        n_total = len(valid_vals)
-        zero_mask = valid_vals == 0.0
-        n_zeros = int(zero_mask.sum())
-        prob_zero = n_zeros / n_total
-
-        pos_vals = valid_vals[~zero_mask]
-
-        if len(pos_vals) < 3:
-            # Almost all zeros — can't fit gamma; leave as NaN.
-            continue
-
-        try:
-            shape, loc, scale_param = stats.gamma.fit(pos_vals, floc=0)
-        except Exception:
-            continue
-
-        # Combined CDF: P(X <= x) = prob_zero + (1 - prob_zero) * gamma_cdf(x)
-        gamma_cdf = stats.gamma.cdf(valid_vals, shape, loc=loc, scale=scale_param)
-        combined_prob = prob_zero + (1.0 - prob_zero) * gamma_cdf
-
-        # Clip to avoid ±inf from the normal PPF at the boundaries.
-        combined_prob = np.clip(combined_prob, 1e-6, 1 - 1e-6)
-
-        spi_month = stats.norm.ppf(combined_prob)
-        spi_vals[valid_positions] = spi_month
-
-    spi_series = pd.Series(spi_vals, index=idx, name=f"SPI-{scale}")
-
-    classes = spi_series.apply(
-        lambda v: drought_class(v) if not np.isnan(v) else "nan"
-    )
-    classes.name = f"drought_class_SPI-{scale}"
-
-    logger.info(
-        "SPI-%d computed over %d months; %d valid values",
-        scale,
-        len(precipitation),
-        int(np.sum(~np.isnan(spi_vals))),
-    )
-
-    return SPIResult(spi=spi_series, scale=scale, drought_classes=classes)
