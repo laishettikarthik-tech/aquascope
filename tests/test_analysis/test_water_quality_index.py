@@ -61,18 +61,11 @@ class TestCCMEWQI:
 
     def test_scope_fraction_correct(self):
         """F1 = 100 * n_failed_params / n_params."""
-        data = {"pH": [5.0], "DO": [9.0], "Turbidity": [8.0]}
+        data = {"pH": [8.0], "DO": [4.0], "Turbidity": [3.0]}
         guidelines = {"pH": 6.5, "DO": 6.5, "Turbidity": 10.0}
         df = _make_measurements(data)
-        # pH fails (5.0 < 6.5); DO passes (9.0 > 6.5); Turbidity fails (8.0 < 10.0)
-        # Wait — use maximum objective to control which parameters fail
-        # Use maximum: pH exceeds 6.5? No. Better to use clear example:
-        data2 = {"pH": [8.0], "DO": [4.0], "Turbidity": [3.0]}
-        guidelines2 = {"pH": 6.5, "DO": 6.5, "Turbidity": 10.0}
-        df2 = _make_measurements(data2)
-        # maximum objective: pH fails (8.0 > 6.5); DO passes (4.0 < 6.5); 
-        # Turbidity passes (3.0 < 10.0)
-        result = ccme_wqi(df2, guidelines2, objective="maximum")
+        # maximum objective: pH fails (8.0 > 6.5); DO and Turbidity pass
+        result = ccme_wqi(df, guidelines, objective="maximum")
         assert result.n_failed_parameters == 1
         assert result.scope == pytest.approx(100.0 / 3.0, abs=0.1)
 
