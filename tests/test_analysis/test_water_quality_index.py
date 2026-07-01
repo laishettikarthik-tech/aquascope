@@ -1,6 +1,5 @@
 """Tests for the CCME Water Quality Index module."""
 
-import numpy as np
 import pandas as pd
 import pytest
 
